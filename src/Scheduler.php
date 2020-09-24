@@ -64,6 +64,7 @@ class Scheduler {
 
     public function run() {
         while (!$this->taskQueue->isEmpty()) {
+            self::wait();
             /**@var Task $task*/
             $task = $this->taskQueue->dequeue();
             $retVal  =$task->run();
@@ -74,7 +75,6 @@ class Scheduler {
                 $this->newTask($retVal, 'ret-val-');
             }
             if ($task->isFinished()) {
-                echo "task {$task->getTaskId()} end \n";
                 unset($this->taskMap[$task->getTaskId()]);
             } else {
                 $this->schedule($task);

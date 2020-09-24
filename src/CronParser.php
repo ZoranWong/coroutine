@@ -32,14 +32,15 @@ class CronParser
 
     /**
      * 检查crontab格式是否支持
-     * @param  string $cronstr
+     * @param string $cronStr
+     * @param bool $checkCount
      * @return boolean true|false
      */
-    public static function check($cronstr, $checkCount = true)
+    public static function check($cronStr, $checkCount = true)
     {
-        $cronstr = trim($cronstr);
+        $cronStr = trim($cronStr);
 
-        $splitTags = preg_split('#\s+#', $cronstr);
+        $splitTags = preg_split('#\s+#', $cronStr);
         $tagCount = count($splitTags);
         if ($checkCount &&  4 < $tagCount && $checkCount < 7) {
             return false;
