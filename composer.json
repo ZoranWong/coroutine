@@ -1,0 +1,24 @@
+{
+    "name": "zoran-wong/coroutine",
+    "description": "coroutine for php",
+    "type": "library",
+    "require-dev": {
+        "phpunit/phpunit": "^9.3"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "ZoranWong",
+            "email": "904110231@qq.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "ZoranWong\\Coroutine\\": "src/"
+        },
+        "files": ["src/functions_include.php"]
+    },
+    "require": {
+      "ext-calendar": "*"
+    }
+}
