@@ -23,6 +23,10 @@ class Scheduler {
         usleep(mt_rand(self::$SLEEP_INTERVAL, self::$SLEEP_INTERVAL * 10));
     }
 
+    public static function setTaskTimeout($timeout) {
+        set_time_limit($timeout);
+    }
+
     public static function getInstance() {
         if(self::$singleton === null) {
             self::$singleton = new static();

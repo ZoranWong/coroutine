@@ -80,3 +80,7 @@ function corn(Closure $closure, $time, $isCrontab = false) {
     };
     coroutine($call);
 }
+
+function taskTimeout($timeout) {
+    Scheduler::setTaskTimeout($timeout);
+}
