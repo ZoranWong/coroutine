@@ -49,9 +49,11 @@ function run() {
 function timeout($second = 0) {
     $end = $start = microtime(true);
     while ($end - $start < $second) {
+        Scheduler::wait();
         $end = microtime(true);
         yield;
     }
+    var_dump($end - $start < $second);
     return $end - $start;
 }
 
@@ -66,25 +68,14 @@ function timer(Closure $closure, $second) {
 
 function corn(Closure $closure, $time, $isCrontab = false) {
     $call = function () use ($time, $closure, $isCrontab){
-        $crontab = null;
-        if(!is_numeric($time)) {
-            $crontab = new Crontab($time);
-        }
         while (1) {
-            $timeout = null;
             if(is_numeric($time)) {
                 $timeout = yield timeout($time);
+                yield $closure($timeout);
             } else {
-                $start = $end = microtime(true);
-
-                while(!($crontab->valid())) {
-                    $end = microtime(true);
-                    yield;
-                }
-                $timeout = $end - $start;
-//                yield $crontab->calcNextTime();
+                $crontab = new Crontab($time, $closure);
+                yield $crontab();
             }
-            yield $closure($timeout);
         }
     };
     coroutine($call);

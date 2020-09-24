@@ -12,10 +12,15 @@ class Scheduler {
     protected $taskMap = [];
     protected $taskQueue;
     protected static $singleton = null;
-
+    public static $SLEEP_INTERVAL = 100;
 
     protected function __construct() {
         $this->taskQueue = new SplQueue();
+    }
+
+    public static function wait() {
+        mt_srand(microtime(true));
+        usleep(mt_rand(self::$SLEEP_INTERVAL, self::$SLEEP_INTERVAL * 10));
     }
 
     public static function getInstance() {
@@ -55,8 +60,6 @@ class Scheduler {
 
     public function run() {
         while (!$this->taskQueue->isEmpty()) {
-            mt_srand(microtime(true));
-            usleep(mt_rand(100, 1000));
             /**@var Task $task*/
             $task = $this->taskQueue->dequeue();
             $retVal  =$task->run();

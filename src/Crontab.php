@@ -30,16 +30,17 @@ class Crontab
      */
     public $intvalDateList = [];
 
-    protected $callable = null;
+    protected $callable;
 
     /**
      * 构造函数
-     * @param string   $intvalTag 任务间隔标识 s@1 m@1 h@1 at@00:00
+     * @param string $intvalTag 任务间隔标识 s@1 m@1 h@1 at@00:00
+     * @param $callable
      */
-    public function __construct($intvalTag)
+    public function __construct($intvalTag, $callable)
     {
         $this->intvalTag = $intvalTag;
-//        $this->status = 1;
+        $this->callable = $callable;
     }
 
     /**
@@ -76,25 +77,26 @@ class Crontab
             return false;
         }
 
-        // 初始化
-//        if ($this->nextTime === 0) {
-//            yield $this->calcNextTime();
-//        }
         $this->nextTime = time();
         if(CronParser::checkTime($this->intvalTag, $this->nextTime)) {
             if($this->lastTime === 0 ) {
                 $this->lastTime = $this->nextTime;
             }else if($this->lastTime < $this->nextTime) {
-                $this->lastTime = $this->nextTime;
                 return true;
             }
         }
-//        $time = microtime(true);
-//        if ($time >= $this->nextTime) {
-//            return true;
-//        }
-
         return false;
+    }
+
+    public function __invoke()
+    {
+        while (!$this->valid()) {
+            Scheduler::wait();
+            yield;
+        }
+        $call = $this->callable;
+        yield $call(microtime(true) - $this->lastTime);
+        $this->lastTime = $this->nextTime;
     }
 
     /**
