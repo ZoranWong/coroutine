@@ -53,7 +53,6 @@ function timeout($second = 0) {
         $end = microtime(true);
         yield;
     }
-    var_dump($end - $start < $second);
     return $end - $start;
 }
 
