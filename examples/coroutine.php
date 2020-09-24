@@ -6,8 +6,19 @@ include "../src/helper.php";
     yield;
     $task = yield \ZoranWong\Coroutine\currentTask();
     echo "------------- 测试 1 {$task->getTaskId()}------------\n";
-    yield ;
+    yield;
     echo "========== 异步 ========\n";
+    if(!file_exists('data')) {
+        file_put_contents('data', '');
+    }
+    $fp = fopen('data','r+');
+    stream_set_write_buffer($fp, filesize('coroutine.php'));
+    $out = file_get_contents('coroutine.php');
+    // 耗时任务可以使用yield操作符分解成多个微任务进行
+    for ($i = 0; $i < 1000000000; $i++) {
+        yield fwrite($fp, $out);
+    }
+    fclose($fp);
 });
 
 \ZoranWong\Coroutine\timer(function ($timeout) {
