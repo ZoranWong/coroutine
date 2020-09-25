@@ -1,6 +1,6 @@
 <?php
 include "../vendor/autoload.php";
-include "../src/helper.php";
+//include "../src/helper.php";
 #define await yield;
 \ZoranWong\Coroutine\coroutine(function () {
     yield;
@@ -19,6 +19,7 @@ include "../src/helper.php";
         yield fwrite($fp, $out);
     }
     fclose($fp);
+
 });
 
 \ZoranWong\Coroutine\timer(function ($timeout) {
@@ -32,23 +33,23 @@ include "../src/helper.php";
     echo "=============== 延迟  3  秒 ==========\n";
 }, 3);
 
-\ZoranWong\Coroutine\corn(function ($timeout) {
+\ZoranWong\Coroutine\cron(function ($timeout) {
     echo "--------------- 定时任务，每 5 秒 耗时：{$timeout}-----------\n";
 }, 5);
 
-\ZoranWong\Coroutine\corn(function ($timeout) {
+\ZoranWong\Coroutine\cron(function ($timeout) {
     echo "--------------- 定时任务，每 3 秒 耗时：{$timeout}-----------\n";
 }, 3);
 
-\ZoranWong\Coroutine\corn(function ($timeout) {
+\ZoranWong\Coroutine\cron(function ($timeout) {
     echo "--------------- 定时任务，每 3 秒 , 加一个 耗时：{$timeout}-----------\n";
 }, 3);
 
-\ZoranWong\Coroutine\corn(function ($timeout) {
+\ZoranWong\Coroutine\cron(function ($timeout) {
     echo "--------------- 定时任务，* * * * * *; 耗时：{$timeout}-----------\n";
 }, "* * * * * *");
 //
-\ZoranWong\Coroutine\corn(function ($timeout) {
+\ZoranWong\Coroutine\cron(function ($timeout) {
     $date = date('Y-m-d H:i:s');
     echo "--------------- 定时任务，10 * * * * * ; 耗时：{$timeout}; {$date}-----------\n";
 }, "*/5 * * * * *");

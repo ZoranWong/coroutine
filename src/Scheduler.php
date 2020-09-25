@@ -6,7 +6,10 @@ namespace ZoranWong\Coroutine;
 
 use Generator;
 use SplQueue;
-
+/**
+ * 协程任务调度器
+ * @Class Scheduler
+ * */
 class Scheduler {
     protected $maxTaskId = 0;
     protected $taskMap = [];
@@ -42,11 +45,20 @@ class Scheduler {
         return $tid;
     }
 
+    /**
+     * 杀死指定协程任务
+     *
+     * @param string|int $tid 任务ID
+     * @return bool
+     */
     public function killTask($tid) {
         if (!isset($this->taskMap[$tid])) {
             return false;
         }
+        /**@var Task $task*/
+        $task = $this->taskMap[$tid];
         unset($this->taskMap[$tid]);
+        $task->end();
         // This is a bit ugly and could be optimized so it does not have to walk the queue,
         // but assuming that killing tasks is rather rare I won't bother with it now
         foreach ($this->taskQueue as $i => $task) {
@@ -58,10 +70,17 @@ class Scheduler {
         return true;
     }
 
+    /**
+     * 任务入队
+     * @param Task $task
+     */
     public function schedule(Task $task) {
         $this->taskQueue->enqueue($task);
     }
 
+    /**
+     * 调度器执行入口
+     * */
     public function run() {
         while (!$this->taskQueue->isEmpty()) {
             self::wait();
@@ -75,6 +94,7 @@ class Scheduler {
                 $this->newTask($retVal, 'ret-val-');
             }
             if ($task->isFinished()) {
+                $task->end();
                 unset($this->taskMap[$task->getTaskId()]);
             } else {
                 $this->schedule($task);

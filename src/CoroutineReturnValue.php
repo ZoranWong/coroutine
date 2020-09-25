@@ -3,7 +3,9 @@
 
 namespace ZoranWong\Coroutine;
 
-
+/**
+ * @Class CoroutineReturnValue 协程堆栈返回数据
+ * */
 class CoroutineReturnValue {
     protected $value;
 

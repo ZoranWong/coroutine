@@ -6,7 +6,7 @@ namespace ZoranWong\Coroutine;
 
 /**
  * crontab格式解析工具类
- * @author jlb <497012571@qq.com>
+ * @Class CronParser
  */
 class CronParser
 {

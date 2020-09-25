@@ -65,7 +65,7 @@ function timer(Closure $closure, $second) {
     coroutine($call);
 }
 
-function corn(Closure $closure, $time, $isCrontab = false) {
+function cron(Closure $closure, $time, $isCrontab = false) {
     $call = function () use ($time, $closure, $isCrontab){
         while (1) {
             if(is_numeric($time)) {
