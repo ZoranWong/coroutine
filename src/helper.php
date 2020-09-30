@@ -37,6 +37,14 @@ function currentTask() {
     });
 }
 
+function getTask($tid) {
+    return new SystemCall(function (Task $task, Scheduler $scheduler) use($tid){
+        $t = $scheduler->getTask($tid);
+        $task->setSendValue($t);
+        $scheduler->schedule($task);
+    });
+}
+
 function coroutine(Closure $coroutine) {
     Scheduler::getInstance()->newTask($coroutine());
 }

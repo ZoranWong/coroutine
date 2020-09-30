@@ -1,10 +1,28 @@
 <?php
-
+/**
+ * PHP Version 5.6
+ *
+ * @category BlackStone Team
+ * @package ZoranWong/Coroutine
+ * @author Zoran Wong
+ * @time 2020/09/25 03:28
+ * @copyright 2020 BlackStone Team
+ * @license MIT
+ * @link skyandsunning@gmail.com
+ * */
 
 namespace ZoranWong\Coroutine;
 
 use Generator;
-
+/**
+ * 协程任务(Task for coroutine)
+ *
+ * @category BlackStone Team
+ * @package ZoranWong\Coroutine
+ * @author Zoran Wong <skyandsunning@gmail.com>
+ * @license MIT
+ * @link skyandsunning@gmail.com
+ * */
 class Task
 {
     const WAIT_RUN = 0;
@@ -24,6 +42,7 @@ class Task
         $this->taskId = $taskId;
         $coroutine = new CoroutineStack($generator, $this, $scheduler);
         $this->coroutine = $coroutine();
+        $this->status = self::WAIT_RUN;
     }
 
     public function getTaskId()

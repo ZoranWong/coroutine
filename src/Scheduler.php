@@ -70,6 +70,10 @@ class Scheduler {
         return true;
     }
 
+    public function getTask($tid) {
+        return isset($this->taskMap[$tid]) ? $this->taskMap[$tid] : null;
+    }
+
     /**
      * 任务入队
      * @param Task $task
