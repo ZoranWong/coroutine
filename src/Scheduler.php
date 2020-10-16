@@ -87,7 +87,7 @@ class Scheduler {
      * */
     public function run() {
         while (!$this->taskQueue->isEmpty()) {
-            self::wait();
+//            self::wait();
             /**@var Task $task*/
             $task = $this->taskQueue->dequeue();
             $retVal  =$task->run();
