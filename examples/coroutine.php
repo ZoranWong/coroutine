@@ -1,8 +1,15 @@
 <?php
+
+use function ZoranWong\Coroutine\coroutine;
+use function ZoranWong\Coroutine\cron;
+use function ZoranWong\Coroutine\currentTask;
+use function ZoranWong\Coroutine\run;
+use function ZoranWong\Coroutine\timeout;
+use function ZoranWong\Coroutine\timer;
+
 include "../vendor/autoload.php";
-//include "../src/helper.php";
-#define await yield;
-\ZoranWong\Coroutine\coroutine(function () {
+
+coroutine(function () {
     $socket = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 
     if(socket_bind($socket, '127.0.0.1')) {
@@ -19,7 +26,7 @@ include "../vendor/autoload.php";
 
 
     yield;
-    $task = yield \ZoranWong\Coroutine\currentTask();
+    $task = yield currentTask();
     echo "------------- 测试 1 {$task->getTaskId()}------------\n";
     yield;
     echo "========== 异步 ========\n";
@@ -36,38 +43,39 @@ include "../vendor/autoload.php";
     fclose($fp);
 });
 
-\ZoranWong\Coroutine\timer(function ($timeout) {
+timer(function ($timeout) {
+    yield;
     echo "--------------- 测试定时器，延迟 5 秒 耗时：{$timeout}-----------\n";
-}, 5);
+}, 5, true);
 
-\ZoranWong\Coroutine\timer(function ($timeout) {
+timer(function ($timeout) {
     yield;
     echo "--------------- 测试定时器，延迟 3 秒耗时：{$timeout} -----------\n";
-    yield \ZoranWong\Coroutine\timeout(3);
+    yield timeout(3);
     echo "=============== 延迟  3  秒 ==========\n";
 }, 3);
 
-\ZoranWong\Coroutine\cron(function ($timeout) {
+cron(function ($timeout) {
     echo "--------------- 定时任务，每 5 秒 耗时：{$timeout}-----------\n";
 }, 5);
 
-\ZoranWong\Coroutine\cron(function ($timeout) {
+cron(function ($timeout) {
     echo "--------------- 定时任务，每 3 秒 耗时：{$timeout}-----------\n";
 }, 3);
 
-\ZoranWong\Coroutine\cron(function ($timeout) {
+cron(function ($timeout) {
     echo "--------------- 定时任务，每 3 秒 , 加一个 耗时：{$timeout}-----------\n";
 }, 3);
 
-\ZoranWong\Coroutine\cron(function ($timeout) {
+cron(function ($timeout) {
     echo "--------------- 定时任务，* * * * * *; 耗时：{$timeout}-----------\n";
 }, "* * * * * *");
 //
-\ZoranWong\Coroutine\cron(function ($timeout) {
+cron(function ($timeout) {
     $date = date('Y-m-d H:i:s');
     echo "--------------- 定时任务，10 * * * * * ; 耗时：{$timeout}; {$date}-----------\n";
 }, "*/5 * * * * *");
 
 
 
-\ZoranWong\Coroutine\run();
+run();
