@@ -53,4 +53,9 @@ class SystemCall
     {
         return new CoroutineReturnValue($value);
     }
+
+    public static function wait()
+    {
+        Scheduler::wait();
+    }
 }

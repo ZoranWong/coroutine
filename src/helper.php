@@ -1,12 +1,14 @@
 <?php
+
 namespace ZoranWong\Coroutine;
 
 use Closure;
 use Generator;
 
-function newTask(Generator $coroutine) {
+function newTask(Generator $coroutine)
+{
     return new SystemCall(
-        function(Task $task, Scheduler $scheduler) use ($coroutine) {
+        function (Task $task, Scheduler $scheduler) use ($coroutine) {
             $task->setSendValue($scheduler->newTask($coroutine));
             $scheduler->schedule($task);
         }
@@ -14,47 +16,54 @@ function newTask(Generator $coroutine) {
 }
 
 
-function killTask($tid) {
+function killTask($tid)
+{
     return new SystemCall(
-        function(Task $task, Scheduler $scheduler) use ($tid) {
+        function (Task $task, Scheduler $scheduler) use ($tid) {
             $task->setSendValue($scheduler->killTask($tid));
             $scheduler->schedule($task);
         }
     );
 }
 
-function getTaskId() {
-    return new SystemCall(function(Task $task, Scheduler $scheduler) {
+function getTaskId()
+{
+    return new SystemCall(function (Task $task, Scheduler $scheduler) {
         $task->setSendValue($task->getTaskId());
         $scheduler->schedule($task);
     });
 }
 
-function currentTask() {
+function currentTask()
+{
     return new SystemCall(function (Task $task, Scheduler $scheduler) {
         $task->setSendValue($task);
         $scheduler->schedule($task);
     });
 }
 
-function getTask($tid) {
-    return new SystemCall(function (Task $task, Scheduler $scheduler) use($tid){
+function getTask($tid)
+{
+    return new SystemCall(function (Task $task, Scheduler $scheduler) use ($tid) {
         $t = $scheduler->getTask($tid);
         $task->setSendValue($t);
         $scheduler->schedule($task);
     });
 }
 
-function coroutine(Closure $coroutine) {
+function coroutine(Closure $coroutine)
+{
     Scheduler::getInstance()->newTask($coroutine());
 }
 
 
-function run() {
+function run()
+{
     Scheduler::getInstance()->run();
 }
 
-function timeout($second = 0) {
+function timeout($second = 0)
+{
     $end = $start = microtime(true);
     while ($end - $start < $second) {
         Scheduler::wait();
@@ -65,18 +74,25 @@ function timeout($second = 0) {
 }
 
 
-function timer(Closure $closure, $second) {
-    $call = function () use ($second, $closure) {
-        $timeout = yield timeout($second);
-        yield $closure($timeout);
+function timer(Closure $closure, $second, $persistence = false)
+{
+    $call = function () use ($second, $closure, $persistence) {
+        do {
+            $timeout = yield timeout($second);
+            yield $closure($timeout);
+            $id = yield SystemCall::getTaskId();
+            if (!$persistence)
+                yield SystemCall::killTask($id);
+        } while (true);
     };
     coroutine($call);
 }
 
-function cron(Closure $closure, $time, $isCrontab = false) {
-    $call = function () use ($time, $closure, $isCrontab){
+function cron(Closure $closure, $time, $isCrontab = false)
+{
+    $call = function () use ($time, $closure, $isCrontab) {
         while (1) {
-            if(is_numeric($time)) {
+            if (is_numeric($time)) {
                 $timeout = yield timeout($time);
                 yield $closure($timeout);
             } else {
@@ -88,6 +104,7 @@ function cron(Closure $closure, $time, $isCrontab = false) {
     coroutine($call);
 }
 
-function taskTimeout($timeout) {
+function taskTimeout($timeout)
+{
     Scheduler::setTaskTimeout($timeout);
 }

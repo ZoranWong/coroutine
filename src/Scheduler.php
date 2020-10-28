@@ -87,7 +87,6 @@ class Scheduler {
      * */
     public function run() {
         while (!$this->taskQueue->isEmpty()) {
-//            self::wait();
             /**@var Task $task*/
             $task = $this->taskQueue->dequeue();
             $retVal  =$task->run();
@@ -95,7 +94,7 @@ class Scheduler {
                 $retVal($task, $this);
                 continue;
             }elseif ($retVal instanceof Generator) {
-                $this->newTask($retVal, 'ret-val-');
+                $this->newTask($retVal, 'coroutine_');
             }
             if ($task->isFinished()) {
                 $task->end();

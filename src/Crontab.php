@@ -22,24 +22,24 @@ class Crontab
      * 任务间隔标识 s@1 m@1 h@1 at@00:00
      * @var string
      */
-    protected $intvalTag = '';
+    protected $intValTag = '';
 
     /**
      * 任务列表
      * @var array
      */
-    public $intvalDateList = [];
+    public $intValDateList = [];
 
     protected $callable;
 
     /**
      * 构造函数
-     * @param string $intvalTag 任务间隔标识 s@1 m@1 h@1 at@00:00
+     * @param string $intValTag 任务间隔标识 s@1 m@1 h@1 at@00:00
      * @param $callable
      */
-    public function __construct($intvalTag, $callable)
+    public function __construct($intValTag, $callable)
     {
-        $this->intvalTag = $intvalTag;
+        $this->intValTag = $intValTag;
         $this->callable = $callable;
     }
 
@@ -62,7 +62,7 @@ class Crontab
 
         if ($this->status == 1) {
             $this->nextTime = $this->lastTime = 0;
-            $this->intvalDateList = [];
+            $this->intValDateList = [];
         }
     }
 
@@ -78,7 +78,7 @@ class Crontab
         }
 
         $this->nextTime = time();
-        if(CronParser::checkTime($this->intvalTag, $this->nextTime)) {
+        if(CronParser::checkTime($this->intValTag, $this->nextTime)) {
             if($this->lastTime === 0 ) {
                 $this->lastTime = $this->nextTime;
             }else if($this->lastTime < $this->nextTime) {
@@ -109,19 +109,19 @@ class Crontab
 
         $this->lastTime = $this->nextTime;
 
-        if (CronParser::check($this->intvalTag) && empty($this->intvalDateList)) {
-            $this->intvalDateList = yield CronParser::formatToDate($this->intvalTag, 200);
+        if (CronParser::check($this->intValTag) && empty($this->intValDateList)) {
+            $this->intValDateList = yield CronParser::formatToDate($this->intValTag, 200);
         }
-        if (!empty($this->intvalDateList)) {
-            $this->nextTime =  array_shift($this->intvalDateList);
+        if (!empty($this->intValDateList)) {
+            $this->nextTime =  array_shift($this->intValDateList);
             return;
         }
 
-        if (strpos($this->intvalTag, '@') === false) {
-            throw new \Exception("解析错误: [{$this->intvalTag}]", 1);
+        if (strpos($this->intValTag, '@') === false) {
+            throw new \Exception("解析错误: [{$this->intValTag}]", 1);
         }
 
-        list($tag, $timer) = explode('@', $this->intvalTag);
+        list($tag, $timer) = explode('@', $this->intValTag);
         $this->lastTime = $this->nextTime;
         // 指定每天运行日期  格式 00:00
         if ($tag == 'at' && strlen($timer) == 5) {

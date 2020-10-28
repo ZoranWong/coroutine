@@ -4,7 +4,8 @@
 namespace ZoranWong\Coroutine;
 
 
-class Runable
+interface  Runnable
 {
-
+    function run();
+    function start();
 }
