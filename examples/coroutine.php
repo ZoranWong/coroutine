@@ -6,6 +6,7 @@ use function ZoranWong\Coroutine\currentTask;
 use function ZoranWong\Coroutine\run;
 use function ZoranWong\Coroutine\timeout;
 use function ZoranWong\Coroutine\timer;
+use ZoranWong\Coroutine\Coroutine;
 
 include "../vendor/autoload.php";
 
@@ -78,4 +79,39 @@ cron(function ($timeout) {
 
 
 
-run();
+//run();
+function c1 () {
+    echo "c1 -------\n";
+    yield ;
+    echo "c1 =======\n";
+    return 1;
+}
+
+function c2() {
+    echo "c2 =======\n";
+    $t = yield c1();
+    var_dump($t);
+    echo "c2 -------\n";
+    return 2;
+}
+
+function c3 () {
+    echo "------ c3 ---0000\n";
+    yield;
+    echo "------ c3 ----\n";
+    return 3;
+}
+$coroutine = new Coroutine((function () {
+    $t1 = yield c2();
+    var_dump($t1);
+    echo "-------- coroutine -------\n";
+    yield from c3();
+    echo "-----------------end ---------\n";
+//    yield;
+})());
+
+$coroutine->next();
+$coroutine->next();
+$coroutine->next();
+//$coroutine->next();
+//$coroutine->next();
