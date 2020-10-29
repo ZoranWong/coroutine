@@ -8,6 +8,7 @@ use Exception;
 use Generator;
 use Iterator;
 use SplStack;
+use Throwable;
 use Traversable;
 
 class Coroutine implements Iterator
@@ -18,13 +19,17 @@ class Coroutine implements Iterator
     protected $value = null;
     protected $stack = null;
     protected $name = '';
+    protected $cid = null;
+    public static $maxCId = 0;
 
-    public function __construct(Generator $generator)
+    public function __construct(Generator $generator, string $name = '')
     {
         $this->stack = new SplStack();
         $this->stack->push($generator);
         $this->currentGen = $generator;
         $this->generatorStack();
+        $this->name = $name;
+        $this->cid = self::$maxCId++;
     }
 
     protected function generatorStack()
@@ -36,7 +41,7 @@ class Coroutine implements Iterator
             }
             return $gen;
         }
-        return  null;
+        return null;
     }
 
     /**
@@ -80,13 +85,14 @@ class Coroutine implements Iterator
     protected function nextGen()
     {
         if (!$this->currentGen->valid()) {
-            $this->returnValue = $this->currentGen->getReturn();
+            $returnValue = $this->currentGen->getReturn();
+            $this->returnValue = $returnValue ? $returnValue : $this->returnValue;
             $this->stack->pop();
             $this->oldGen = $this->currentGen;
-            if(!$this->stack->isEmpty())
+            if (!$this->stack->isEmpty())
                 $this->currentGen = $this->stack->top();
             return $this->generatorStack();
-        }elseif(!$this->stack->isEmpty()){
+        } elseif (!$this->stack->isEmpty()) {
             $this->stack->push($this->currentGen);
             return $this->generatorStack();
         }
@@ -101,7 +107,8 @@ class Coroutine implements Iterator
         $this->nextGen();
         if (!$this->currentGen->valid()) {
             $this->stack->pop();
-            $this->currentGen = $this->stack->top();
+            if (!$this->stack->isEmpty())
+                $this->currentGen = $this->stack->top();
         }
         return $val;
     }
@@ -136,9 +143,21 @@ class Coroutine implements Iterator
 
     public function getReturn()
     {
-        if ($this->stack->isEmpty() && !$this->currentGen->valid()) {
-            return $this->currentGen->getReturn();
+        if ($this->currentGen && !$this->currentGen->valid()) {
+            $this->returnValue = $this->currentGen->getReturn();
         }
+        return $this->returnValue;
+    }
+
+    public function isFinished()
+    {
+        return !$this->valid();
+    }
+
+    public function throw(Throwable $throwable)
+    {
+        if ($this->currentGen)
+            return $this->currentGen->throw($throwable);
     }
 
 }

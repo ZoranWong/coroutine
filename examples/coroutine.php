@@ -1,5 +1,6 @@
 <?php
 
+use ZoranWong\Coroutine\Runnable;
 use function ZoranWong\Coroutine\coroutine;
 use function ZoranWong\Coroutine\cron;
 use function ZoranWong\Coroutine\currentTask;
@@ -7,6 +8,7 @@ use function ZoranWong\Coroutine\run;
 use function ZoranWong\Coroutine\timeout;
 use function ZoranWong\Coroutine\timer;
 use ZoranWong\Coroutine\Coroutine;
+use ZoranWong\Coroutine\CTread;
 
 include "../vendor/autoload.php";
 
@@ -78,13 +80,11 @@ cron(function ($timeout) {
 }, "*/5 * * * * *");
 
 
-
-//run();
 function c1 () {
     echo "c1 -------\n";
-    yield ;
-    echo "c1 =======\n";
-    return 1;
+    $t = yield ;
+    echo "c1 ======= {$t}\n";
+//    return 1;
 }
 
 function c2() {
@@ -110,8 +110,24 @@ $coroutine = new Coroutine((function () {
 //    yield;
 })());
 
+$coroutine->send(1000);
 $coroutine->next();
 $coroutine->next();
-$coroutine->next();
+$coroutine->send(100);
 //$coroutine->next();
-//$coroutine->next();
+class T1 implements Runnable{
+    function run()
+    {
+        yield;
+        // TODO: Implement run() method.
+        echo "----------- t1 -------------\n";
+    }
+
+    function start()
+    {
+        // TODO: Implement start() method.
+    }
+}
+$thread = new CTread(new T1);
+$thread->start();
+run();
