@@ -22,14 +22,32 @@ class Coroutine implements Iterator
     protected $cid = null;
     public static $maxCId = 0;
 
+
     public function __construct(Generator $generator, string $name = '')
     {
         $this->stack = new SplStack();
+        $this->name = $name;
+        $this->cid = self::$maxCId++;
+        $this->resetStack($generator);
+    }
+
+    protected function resetStack($generator)
+    {
+        while ($this->stack && !$this->stack->isEmpty())
+            $this->stack->pop();
         $this->stack->push($generator);
         $this->currentGen = $generator;
         $this->generatorStack();
-        $this->name = $name;
-        $this->cid = self::$maxCId++;
+    }
+
+    public function getId()
+    {
+        return $this->cid;
+    }
+
+    public function generators()
+    {
+        return $this->stack;
     }
 
     protected function generatorStack()
@@ -39,9 +57,9 @@ class Coroutine implements Iterator
                 $this->stack->push($gen);
                 $this->currentGen = $gen;
             }
-            return $gen;
+            return $gen instanceof Generator ? $this : $gen;
         }
-        return null;
+        return $this;
     }
 
     /**
@@ -92,8 +110,9 @@ class Coroutine implements Iterator
             if (!$this->stack->isEmpty())
                 $this->currentGen = $this->stack->top();
             return $this->generatorStack();
-        } elseif (!$this->stack->isEmpty()) {
-            $this->stack->push($this->currentGen);
+        } else {
+            if ($this->stack->isEmpty())
+                $this->stack->push($this->currentGen);
             return $this->generatorStack();
         }
         return null;
@@ -102,11 +121,11 @@ class Coroutine implements Iterator
     public function send($value)
     {
         $this->returnValue = $value;
-
         $val = $this->currentGen->send($value);
         $this->nextGen();
         if (!$this->currentGen->valid()) {
-            $this->stack->pop();
+            if (!$this->stack->isEmpty())
+                $this->stack->pop();
             if (!$this->stack->isEmpty())
                 $this->currentGen = $this->stack->top();
         }

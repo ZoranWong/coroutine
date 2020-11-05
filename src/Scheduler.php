@@ -6,43 +6,78 @@ namespace ZoranWong\Coroutine;
 
 use Generator;
 use SplQueue;
+
 /**
  * 协程任务调度器
  * @Class Scheduler
  * */
-class Scheduler {
+class Scheduler
+{
     protected $maxTaskId = 0;
     protected $taskMap = [];
     protected $taskQueue;
+    /**
+     * @var Scheduler $singleton
+     * */
     protected static $singleton = null;
-    public static $SLEEP_INTERVAL = 100;
+    public static $SLEEP_INTERVAL = 50;
+    public static $TASK_INTERVAL_SECOND = 3;
+    public static $TASK_RUN_RATE = 0.5;
+    protected $blockingQueue = null;
+    protected $maxSchedulerTasks = 1024;
 
-    protected function __construct() {
+    public static $currentTaskId = null;
+
+    /**
+     * @var Task $currentTask
+     * */
+    public static $currentTask = null;
+
+    protected function __construct()
+    {
         $this->taskQueue = new SplQueue();
     }
 
-    public static function wait() {
+    public static function wait()
+    {
         mt_srand(microtime(true));
-        usleep(mt_rand(self::$SLEEP_INTERVAL, self::$SLEEP_INTERVAL * 10));
+        $interval = self::$SLEEP_INTERVAL / self::$singleton->taskNum();
+        $time = mt_rand($interval, $interval * 10);
+
+        if (self::$SLEEP_INTERVAL * 11 / 2 > $time)
+            usleep($time);
+        else
+            time_nanosleep(0, $time * 100);
     }
 
-    public static function setTaskTimeout($timeout) {
+    public static function setTaskTimeout($timeout)
+    {
         set_time_limit($timeout);
     }
 
-    public static function getInstance() {
-        if(self::$singleton === null) {
+    public static function getInstance()
+    {
+        if (self::$singleton === null) {
             self::$singleton = new static();
         }
         return self::$singleton;
     }
 
-    public function newTask(Generator $coroutine, $prefix = '') {
-        $tid = ++ $this->maxTaskId;
-        $task = new Task($prefix.$tid, $coroutine, $this);
-        $this->taskMap[$tid] = $task;
+    public function newTask($coroutine)
+    {
+        if ($coroutine instanceof CTread && isset($this->taskMap[$coroutine->getId()])) {
+            return $this->taskMap[$coroutine->getId()];
+        }
+        ++$this->maxTaskId;
+        $task = new Task($coroutine, $this);
+        $this->taskMap[$task->getTaskId()] = $task;
         $this->schedule($task);
-        return $tid;
+        return $task;
+    }
+
+    public function schedulers()
+    {
+
     }
 
     /**
@@ -51,11 +86,12 @@ class Scheduler {
      * @param string|int $tid 任务ID
      * @return bool
      */
-    public function killTask($tid) {
+    public function killTask($tid)
+    {
         if (!isset($this->taskMap[$tid])) {
             return false;
         }
-        /**@var Task $task*/
+        /**@var Task $task */
         $task = $this->taskMap[$tid];
         unset($this->taskMap[$tid]);
         $task->end();
@@ -70,7 +106,8 @@ class Scheduler {
         return true;
     }
 
-    public function getTask($tid) {
+    public function getTask($tid)
+    {
         return isset($this->taskMap[$tid]) ? $this->taskMap[$tid] : null;
     }
 
@@ -78,23 +115,26 @@ class Scheduler {
      * 任务入队
      * @param Task $task
      */
-    public function schedule(Task $task) {
+    public function schedule(Task $task)
+    {
         $this->taskQueue->enqueue($task);
     }
 
     /**
      * 调度器执行入口
      * */
-    public function run() {
+    public function run()
+    {
         while (!$this->taskQueue->isEmpty()) {
-            /**@var Task $task*/
+            /**@var Task $task */
             $task = $this->taskQueue->dequeue();
-            $retVal  =$task->run();
-            if($retVal instanceof SystemCall) {
+            self::$currentTask = $task;
+            self::$currentTaskId = $task->getTaskId();
+            $retVal = $task->run();
+
+            if ($retVal instanceof SystemCall) {
                 $retVal($task, $this);
                 continue;
-            }elseif ($retVal instanceof Generator) {
-                $this->newTask($retVal, 'coroutine_');
             }
             if ($task->isFinished()) {
                 $task->end();
@@ -103,5 +143,43 @@ class Scheduler {
                 $this->schedule($task);
             }
         }
+    }
+
+    protected function sort(array &$tasks)
+    {
+        uasort($tasks, $this->prioritySort());
+    }
+
+    protected function prioritySort()
+    {
+        return function (Task $task1, Task $task2) {
+            $diffTime = $task2->getLastRuntime() - $task1->getLastRuntime();
+            $agvTime = $task2->getAvgRuntime() / $task1->getAvgRuntime();
+            $runCount = $task2->getRunCount() / $task1->getRunCount();
+            return $task1->getPriority() < $task2->getPriority() ? 1 :
+                ($diffTime > self::$TASK_INTERVAL_SECOND ? 1 :
+                    ($agvTime < self::$TASK_RUN_RATE ? 1 : $runCount < 1 ? 1 : -1));
+        };
+    }
+
+    public function taskNum()
+    {
+        return count($this->taskMap);
+    }
+
+    public static function join(Coroutine $coroutine)
+    {
+        $pTid = self::$currentTaskId;
+        $cid = $coroutine->getId();
+    }
+
+    public static function add($coroutine)
+    {
+        return self::getInstance()->newTask($coroutine);
+    }
+
+    public function task($id)
+    {
+        return isset($this->taskMap[$id]) ? $this->taskMap[$id] : null;
     }
 }

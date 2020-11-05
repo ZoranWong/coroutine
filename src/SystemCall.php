@@ -30,21 +30,30 @@ class SystemCall
         });
     }
 
+    public static function send($value)
+    {
+        return new self(function (Task $task, Scheduler $scheduler) use (&$value){
+            $task->setSendValue(SystemCall::retVal($value));
+            $scheduler->schedule($task);
+        });
+    }
+
+
     public static function killTask($id)
     {
         return new self(function (Task $task, Scheduler $scheduler) use ($id) {
             if ($scheduler->killTask($id)) {
                 $scheduler->schedule($task);
             } else {
-                throw new InvalidArgumentException('Invalid task id');
+                throw new InvalidArgumentException('Invalid task id '.$id);
             }
         });
     }
 
-    public static function newTask(Generator $generator)
+    public static function newTask($coroutine)
     {
-        return new self(function (Task $task, Scheduler $scheduler) use ($generator) {
-            $task->setSendValue($scheduler->newTask($generator));
+        return new self(function (Task $task, Scheduler $scheduler) use ($coroutine) {
+            $task->setSendValue($scheduler->newTask($coroutine));
             $scheduler->schedule($task);
         });
     }

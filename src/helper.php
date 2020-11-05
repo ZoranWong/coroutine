@@ -53,7 +53,7 @@ function getTask($tid)
 
 function coroutine(Closure $coroutine)
 {
-    Scheduler::getInstance()->newTask($coroutine());
+    Scheduler::getInstance()->newTask($coroutine);
 }
 
 
@@ -81,8 +81,12 @@ function timer(Closure $closure, $second, $persistence = false)
             $timeout = yield timeout($second);
             yield $closure($timeout);
             $id = yield SystemCall::getTaskId();
-            if (!$persistence)
+
+            if (!$persistence) {
+                var_dump($id);
                 yield SystemCall::killTask($id);
+                break;
+            }
         } while (true);
     };
     coroutine($call);
