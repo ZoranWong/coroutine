@@ -80,30 +80,6 @@ timer(function ($timeout) {
 //    echo "--------------- 定时任务，10 * * * * * ; 耗时：{$timeout}; {$date}-----------\n";
 //}, "*/5 * * * * *");
 
-
-function c1 () {
-    echo "c1 -------\n";
-    $t = yield 200;
-    echo "c1 ======= {$t}\n";
-    yield 7777;
-    return 9888;
-}
-
-function c2() {
-    echo "c2 =======\n";
-    $t = yield c1();
-    var_dump($t);
-    echo "c2 -------\n";
-    return 2;
-}
-
-function c3 () {
-    echo "------ c3 ---0000\n";
-    yield sleep(10);
-    echo "------ c3 ----\n";
-    return 3;
-}
-
 class T1 implements Runnable{
     function run()
     {
