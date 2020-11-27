@@ -62,28 +62,27 @@ function run()
     Scheduler::getInstance()->run();
 }
 
-function timeout($second = 0)
+function timeout($millisecond = 0)
 {
-    $end = $start = microtime(true);
-    while ($end - $start < $second) {
+    $end = $start = microtime(true) * 1000;
+    while ($end - $start < $millisecond) {
         Scheduler::wait();
-        $end = microtime(true);
+        $end = microtime(true) * 1000;
         yield;
     }
     return $end - $start;
 }
 
 
-function timer(Closure $closure, $second, $persistence = false)
+function timer(Closure $closure, $millisecond, $persistence = false)
 {
-    $call = function () use ($second, $closure, $persistence) {
+    $call = function () use ($millisecond, $closure, $persistence) {
         do {
-            $timeout = yield timeout($second);
+            $timeout = yield timeout($millisecond);
             yield $closure($timeout);
             $id = yield SystemCall::getTaskId();
 
             if (!$persistence) {
-                var_dump($id);
                 yield SystemCall::killTask($id);
                 break;
             }

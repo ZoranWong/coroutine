@@ -21,5 +21,8 @@
     "require": {
       "ext-calendar": "*",
       "ext-sockets": "*"
-    }
+    },
+    "bin": [
+        "bin/phpboot"
+    ]
 }

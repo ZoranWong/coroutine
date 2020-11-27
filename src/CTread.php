@@ -21,18 +21,14 @@ class CTread extends Coroutine implements Runnable
     protected $started = false;
     protected $interrupt = false;
     protected $parentId = null;
-    /**
-     * @var Task $task
-     * */
-    protected $task = null;
 
-    public function __construct($runnable = null, string $name = '')
+    public function __construct($runnable = null, Task $task = null, string $name = '')
     {
         $this->state = self::STATE_NEW;
         $this->runnable = $runnable ? $runnable : $this;
         $name = $name ? $name : uniqid(get_class($this->runnable));
-        parent::__construct($this->run(), $name);
-        $this->task = Scheduler::add($this);
+        $coroutine = $this->run();
+        parent::__construct($coroutine, $task, $name);
     }
 
 
@@ -43,9 +39,21 @@ class CTread extends Coroutine implements Runnable
     {
         if ($this->runnable instanceof Closure) {
             $runnable = $this->runnable;
-            yield $runnable();
+            yield (function () use ($runnable) {
+                Scheduler::$currentTask = $this->task;
+                Scheduler::$currentTaskId = $this->task ? $this->task->getTaskId() : null;
+                yield $runnable($this->task);
+            })();
         } else {
-            yield $this->runnable->run();
+            if ($this->runnable instanceof Runnable) {
+                yield (function () {
+                    yield $this->runnable->run();
+                })();
+            } else if ($this->runnable instanceof Coroutine) {
+                yield (function () {
+                    $this->runnable;
+                })();
+            }
         }
     }
 
@@ -92,6 +100,7 @@ class CTread extends Coroutine implements Runnable
 
     public function start()
     {
+        $this->task = Scheduler::add($this);
         if ($this->started) {
             if ($this->valid()) {
                 $this->state = self::STATE_RUNNING;
@@ -103,9 +112,10 @@ class CTread extends Coroutine implements Runnable
         }
     }
 
-    public function join()
+    public function join(int $waitTime = 0)
     {
-        $this->parentId = Scheduler::$currentTaskId;
-        $this->task->waitFor();
+        $start = microtime(true) * 1000;
+        $end =  $waitTime > 0? ($waitTime + $start) : 0;
+        Scheduler::join($this->task, $end);
     }
 }

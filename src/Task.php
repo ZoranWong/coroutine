@@ -58,16 +58,33 @@ class Task
 
     protected $childrenTasks = [];
 
+    protected $waitTasks = [];
+
+    protected $taskId = null;
+
     public function __construct($coroutine, Scheduler $scheduler)
     {
-        $this->coroutine = (!$coroutine instanceOf CTread) ? new CTread($coroutine, 'sys-thread') : $coroutine;
+        $this->taskId = spl_object_hash($this);
+        $this->coroutine = (!$coroutine instanceOf CTread) ? new CTread($coroutine, $this, 'sys-thread') : $coroutine;
         $this->status = self::WAIT_RUN;
         $this->scheduler = $scheduler;
+
+        foreach (Scheduler::$currentTask->getWaitTasks() as $id => $data) {
+            if ($id !== $this->taskId) {
+                $task = $scheduler->getTask($id);
+                $this->waitFor($task, $data['end']);
+            }
+        }
+    }
+
+    public function getWaitTasks()
+    {
+        return $this->waitTasks;
     }
 
     public function getTaskId()
     {
-        return $this->coroutine->getId();
+        return $this->taskId;
     }
 
     public function setSendValue($sendValue)
@@ -82,8 +99,13 @@ class Task
 
     public function end()
     {
-        if($this->parentTask) {
-            $this->parentTask->removeChild($this);
+        $time = microtime(true) * 1000;
+        if (($tasks = $this->scheduler->dependencyTasks($this->getTaskId()))) {
+            foreach ($tasks as $taskId) {
+                $task = $this->scheduler->getTask($taskId);
+                if($task)
+                    $task->updateWaitTasks($time);
+            }
         }
         $this->status = self::RUN_END;
     }
@@ -173,19 +195,43 @@ class Task
         unset($this->childrenTasks[$task->getTaskId()]);
     }
 
-    public function thread()
+    public function waitFor(Task $task = null, int $end = 0)
     {
-        return $this->coroutine;
+        if (!$task) {
+            $task = Scheduler::$currentTask;
+        }
+        $id = $task->getTaskId();
+        foreach ($this->waitTasks as $taskId => $data) {
+            if ($this->taskId !== $taskId)
+                $task->waitFor(Scheduler::getInstance()->getTask($taskId), $data['end']);
+        }
+        if ($id !== $this->taskId)
+            $this->waitTasks[$id] = [
+                'end' => $end
+            ];
     }
 
-    public function waitFor()
+    public function hasWait()
     {
-        $this->parentTask = Scheduler::$currentTask;
-        $this->parentTask->addChild($this);
+        return $this->waitTaskCount() > 0;
     }
 
-    public function addChild(Task $task)
+    public function updateWaitTasks($time)
     {
-        $this->childrenTasks[$task->getTaskId()] = $task;
+        foreach ($this->waitTasks as $id => $data) {
+            if ($data['end'] > 0 && $data['end'] < $time || !$this->scheduler->getTask($id)) {
+                unset($this->waitTasks[$id]);
+            }
+        }
+    }
+
+    public function waitTaskCount()
+    {
+        return count($this->waitTasks);
+    }
+
+    public function removeWaitTask($id)
+    {
+        unset($this->waitTasks[$id]);
     }
 }

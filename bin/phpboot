@@ -1,0 +1,22 @@
+#!/usr/bin/env php
+<?php
+foreach (array(__DIR__ . '/../../autoload.php', __DIR__ . '/../vendor/autoload.php', __DIR__ . '/vendor/autoload.php') as $file) {
+    if (file_exists($file)) {
+        define('PHPUNIT_COMPOSER_INSTALL', $file);
+        break;
+    }
+}
+
+$path = realpath($argv[1]);
+if ($path) {
+    require_once PHPUNIT_COMPOSER_INSTALL;
+    require_once "{$path}";
+}
+$info = pathinfo($argv[1]);
+$className = $info['filename'];
+if (class_exists($className) && method_exists($className, 'main')) {
+    \ZoranWong\Coroutine\coroutine(function () use ($className){
+        yield $className::main();
+    });
+    \ZoranWong\Coroutine\run();
+}

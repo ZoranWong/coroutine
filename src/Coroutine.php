@@ -21,14 +21,20 @@ class Coroutine implements Iterator
     protected $name = '';
     protected $cid = null;
     public static $maxCId = 0;
-
-
-    public function __construct(Generator $generator, string $name = '')
+    protected $dependencyCoroutines = [];
+    protected $scheduler = null;
+    /**
+     * @var Task $task
+     * */
+    protected $task = null;
+    public function __construct(Generator $generator, Task $task = null, string $name = '')
     {
+        $this->task = $task;
         $this->stack = new SplStack();
         $this->name = $name;
-        $this->cid = self::$maxCId++;
+        $this->cid = spl_object_hash($this);
         $this->resetStack($generator);
+        $this->scheduler = Scheduler::getInstance();
     }
 
     protected function resetStack($generator)
@@ -179,4 +185,27 @@ class Coroutine implements Iterator
             return $this->currentGen->throw($throwable);
     }
 
+    public function dependency($id)
+    {
+        if ($this->hasDependency() && !$this->isDependency($id)) {
+            $this->dependencyCoroutines[] = $id;
+            $this->scheduler->dependency($id, $this);
+        }
+    }
+
+    public function isDependency($id)
+    {
+        return array_search($id, $this->dependencyCoroutines);
+    }
+
+    public function hasDependency()
+    {
+        return empty($this->dependencyCoroutines);
+    }
+
+    public function releaseDependency($id) {
+        if ($this->hasDependency() && ($idx = array_search($id, $this->dependencyCoroutines))) {
+            array_splice($this->dependencyCoroutines, $idx, 1);
+        }
+    }
 }

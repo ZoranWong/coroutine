@@ -14,6 +14,9 @@ use SplQueue;
 class Scheduler
 {
     protected $maxTaskId = 0;
+    /**
+     * @var Task[] $taskMap
+     * */
     protected $taskMap = [];
     protected $taskQueue;
     /**
@@ -25,6 +28,7 @@ class Scheduler
     public static $TASK_RUN_RATE = 0.5;
     protected $blockingQueue = null;
     protected $maxSchedulerTasks = 1024;
+    protected $dependencies = [];
 
     public static $currentTaskId = null;
 
@@ -41,8 +45,8 @@ class Scheduler
     public static function wait()
     {
         mt_srand(microtime(true));
-        $interval = self::$SLEEP_INTERVAL / self::$singleton->taskNum();
-        $time = mt_rand($interval, $interval * 10);
+        $interval = self::$SLEEP_INTERVAL / (self::$singleton->taskNum() + 1);
+        $time = mt_rand((int)$interval, (int)($interval * 10));
 
         if (self::$SLEEP_INTERVAL * 11 / 2 > $time)
             usleep($time);
@@ -63,7 +67,7 @@ class Scheduler
         return self::$singleton;
     }
 
-    public function newTask($coroutine)
+    public function newTask(&$coroutine)
     {
         if ($coroutine instanceof CTread && isset($this->taskMap[$coroutine->getId()])) {
             return $this->taskMap[$coroutine->getId()];
@@ -71,13 +75,18 @@ class Scheduler
         ++$this->maxTaskId;
         $task = new Task($coroutine, $this);
         $this->taskMap[$task->getTaskId()] = $task;
-        $this->schedule($task);
         return $task;
     }
 
     public function schedulers()
     {
-
+        $time = microtime(true) * 1000;
+        foreach ($this->taskMap as $task) {
+            $task->updateWaitTasks($time);
+             if (!$task->hasWait()) {
+                 $this->schedule($task);
+             }
+        }
     }
 
     /**
@@ -125,24 +134,29 @@ class Scheduler
      * */
     public function run()
     {
-        while (!$this->taskQueue->isEmpty()) {
-            /**@var Task $task */
-            $task = $this->taskQueue->dequeue();
-            self::$currentTask = $task;
-            self::$currentTaskId = $task->getTaskId();
-            $retVal = $task->run();
-
-            if ($retVal instanceof SystemCall) {
-                $retVal($task, $this);
-                continue;
-            }
-            if ($task->isFinished()) {
-                $task->end();
-                unset($this->taskMap[$task->getTaskId()]);
-            } else {
-                $this->schedule($task);
+        while (count($this->taskMap) > 0) {
+            $this->schedulers();
+            while (!$this->taskQueue->isEmpty()) {
+                /**@var Task $task */
+                $task = $this->taskQueue->dequeue();
+                self::$currentTask = $task;
+                self::$currentTaskId = $task->getTaskId();
+                if (!$task->hasWait()) {
+                    $retVal = $task->run();
+                    if ($retVal instanceof SystemCall) {
+                        $retVal($task, $this);
+                        continue;
+                    }
+                }
+                if ($task->isFinished()) {
+                    $task->end();
+                    unset($this->taskMap[$task->getTaskId()]);
+                } else {
+//                    $this->schedule($task);
+                }
             }
         }
+
     }
 
     protected function sort(array &$tasks)
@@ -158,7 +172,7 @@ class Scheduler
             $runCount = $task2->getRunCount() / $task1->getRunCount();
             return $task1->getPriority() < $task2->getPriority() ? 1 :
                 ($diffTime > self::$TASK_INTERVAL_SECOND ? 1 :
-                    ($agvTime < self::$TASK_RUN_RATE ? 1 : $runCount < 1 ? 1 : -1));
+                    ($agvTime < self::$TASK_RUN_RATE ? 1 : ($runCount < 1 ? 1 : -1)));
         };
     }
 
@@ -167,13 +181,31 @@ class Scheduler
         return count($this->taskMap);
     }
 
-    public static function join(Coroutine $coroutine)
+    public static function join(Task $task, int $end = 0)
     {
-        $pTid = self::$currentTaskId;
-        $cid = $coroutine->getId();
+        self::$currentTask->waitFor($task, $end);
+        self::getInstance()->dependency($task->getTaskId(), self::$currentTask->getTaskId());
     }
 
-    public static function add($coroutine)
+    public function dependency($id, $taskId)
+    {
+        if (!isset($this->dependencies[$id])) {
+            $this->dependencies[$id] = [];
+        }
+
+        $this->dependencies[$id][] = $taskId;
+    }
+
+    /**
+     * @param $id
+     * @return Task[]
+     */
+    public function dependencyTasks($id)
+    {
+        return $this->dependencies[$id] ?? [];
+    }
+
+    public static function add(&$coroutine)
     {
         return self::getInstance()->newTask($coroutine);
     }
