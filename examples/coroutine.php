@@ -46,18 +46,18 @@ include "../vendor/autoload.php";
 //    fclose($fp);
 //});
 
-timer(function ($timeout) {
-    echo "=========== time out ========\n";
-    yield;
-    echo "--------------- 测试定时器，延迟 5 秒 耗时：{$timeout}-----------\n";
-}, 5, true);
-//
+//timer(function ($timeout) {
+//    echo "=========== time out ========\n";
+//    yield;
+//    echo "--------------- 测试定时器，延迟 5 秒 耗时：{$timeout}-----------\n";
+//}, 5000, true);
+////
 timer(function ($timeout) {
     yield;
     echo "--------------- 测试定时器，延迟 3 秒耗时：{$timeout} -----------\n";
-    yield timeout(3);
+    yield timeout(3000);
     echo "=============== 延迟  3  秒 ==========\n";
-}, 3);
+}, 3000);
 //
 //cron(function ($timeout) {
 //    echo "--------------- 定时任务，每 5 秒 耗时：{$timeout}-----------\n";
@@ -103,26 +103,16 @@ function c3 () {
     echo "------ c3 ----\n";
     return 3;
 }
-$coroutine = new Coroutine((function () {
-    $t1 = yield c2();
-    var_dump($t1);
-    echo "-------- coroutine -------\n";
-    yield from c3();
-    echo "-----------------end ---------\n";
-//    yield;
-})());
 
-$coroutine->send(1000);
-$coroutine->next();
-$coroutine->next();
-$coroutine->send(100);
-$coroutine->next();
 class T1 implements Runnable{
     function run()
     {
-        yield;
-        // TODO: Implement run() method.
-        echo "----------- t1 -------------\n";
+        for ($i = 0; $i < 10; $i ++) {
+            yield timeout(100);
+            yield;
+            echo "------------- start t1 {$i} -----------\n";
+        }
+
     }
 
     function start()
@@ -130,11 +120,37 @@ class T1 implements Runnable{
         // TODO: Implement start() method.
     }
 }
-$thread = new CTread(new T1);
-$thread->start();
 
-$pid = $argv[1];
-var_dump($pid);
-posix_kill($pid, SIGTTIN);
-pcntl_signal_dispatch();
+
+class T2 implements Runnable{
+    function run()
+    {
+        for ($i = 0; $i < 10; $i ++) {
+            yield timeout(100);
+            yield;
+            echo "------------- start t2 {$i}-----------\n";
+        }
+    }
+
+    function start()
+    {
+        // TODO: Implement start() method.
+    }
+}
+//
+coroutine(function (\ZoranWong\Coroutine\Task $task) {
+    echo "+++++++++++++++++++++ ".$task->getTaskId()." ++++++++++++++++++\n";
+
+    $thread1 = new CTread(new T1);
+    $thread1->start();
+    yield $thread1->join();
+    $thread2 = new CTread(new T2);
+    echo "-----  run  -----\n";
+    echo "------------ join thread1 ---------\n";
+    $thread2->start();
+    yield $thread2->join(500);
+    $thread3 = new CTread(new T1);
+    $thread3->start();
+    echo "-------------- main ---------\n";
+});
 run();
